@@ -1,8 +1,8 @@
 # Data the agent reads
 
-The agent does not ship with data. It reads four BigQuery tables, so you need either a data layer that produces them or your own tables with the columns below. Only the columns listed are used; extra columns are ignored.
+This is the BigQuery side only; conversations are stored in Firestore (see the README). The agent does not ship with data. It reads four BigQuery tables, so you need either a data layer that produces them or your own tables with the columns below. Only the columns listed are used; extra columns are ignored.
 
-Dataset names and the BigQuery location are constants in `packages/backend/src/data/bigquery.ts` (`sunny_sec`, `sunny_prices`, `sunny_meta`, `europe-central2`). Change them there if your datasets are named or located differently. Tables must be in the same location as the queries run (`LOCATION`).
+Dataset names, the BigQuery location and the per-query cost cap are constants in `packages/backend/src/config/bigquery.ts` (`DATASETS`: `sunny_sec`, `sunny_prices`, `sunny_meta`; `LOCATION`: `europe-central2`). Change them there if your datasets are named or located differently. Tables must be in the same location as the queries run (`LOCATION`).
 
 | Table | Columns used by the agent |
 |-------|---------------------------|

@@ -1,33 +1,44 @@
-# LLM Agent
+# LLM Chat
 
-Financial Assistant agent: Gemini function calling over SEC facts and daily stock prices stored in BigQuery.
+Financial Assistant with conversation memory: a Gemini function-calling agent over SEC facts and daily stock prices in BigQuery, with chat sessions stored in Firestore, so follow-ups like "and Walmart's?" work.
 
-**Part of:** [AI/LLM POC sequence](https://github.com/pawel-janus/ai-llm-pocs) - POC #4
+**Part of:** [AI/LLM POC sequence](https://github.com/pawel-janus/ai-llm-pocs) - POC #5
 
-**Status:** ✅ Complete. Agent loop, `POST /api/agent` and a UI with a tool log work; deployed privately to Cloud Run (see [docs/deployment-plan.md](docs/deployment-plan.md)).
+**Status:** 🔄 In progress. Chat backend (`POST /api/chat`, sessions API) and UI work locally; private Cloud Run deployment is not done yet (plan: [docs/deployment-plan.md](docs/deployment-plan.md)).
 
 **Example interaction:**
-- **Question:** "Compare Apple's and Walmart's net income in 2019."
-- **What happens:** the model calls `getFacts` for both tickers (in parallel), reads the rows, and answers with the figures, their `period_end` dates and whether each is a full year.
-- **Answer:** a short text that quotes only numbers returned by the tools; when a period is missing from the data, it says so instead of estimating.
+- **Turn 1:** "What was Apple's revenue in fiscal 2019?" - the model calls `getFacts` and answers with the figure and its period.
+- **Turn 2:** "And Walmart's?" - the model resolves "and" to the same metric and year from the history and calls `getFacts` for Walmart.
+- **Turn 3:** "Compare them." - answered from the history, without new tool calls.
 
 ## Features
 
-- **Function calling** with Gemini 2.5 Flash via Vertex AI (`@google/genai`)
-- **Multi-source data fusion:** SEC facts + stock prices
-- **Agent loop:** the model chooses tools, may call several in a row or in parallel (max 6 rounds)
+- **Multi-turn conversations:** the whole history of a session is sent to Gemini with every question; the model resolves references ("it", "the other one", "the same year") itself
+- **Session storage in Firestore:** durable sessions, no state in the backend (Cloud Run may scale to zero or run several instances)
+- **Session management:** list, open, delete, "new conversation"; a new session has no memory of others
+- **Long-conversation alert:** from 20 stored messages the API sets `long_history` and the UI suggests starting a new conversation (no trimming or summarizing yet, see [Known limitations](#known-limitations))
+- **Function calling** with Gemini 2.5 Flash via Vertex AI (`@google/genai`), agent loop of max 6 rounds, parallel tool calls
 - **Fixed tool list over BigQuery:** the model never writes SQL; queries are parameterized and capped at 100 MB billed
 - **Tool argument validation** (Zod) and errors returned to the model instead of thrown
 - **Honest "no data" behaviour:** an empty result carries a note and the nearest available periods
-- **Tool execution log** returned by the API and shown in the UI
-- Derived metrics (price change) computed in code, not by the model
+- **Tool execution log** stored with each answer and shown in the UI
 
 ## How it works
 
-1. `POST /api/agent` receives a question.
-2. `runAgent` sends it to Gemini together with the tool declarations and a system instruction.
-3. If the model answers with function calls, the backend validates the arguments, runs the BigQuery queries and sends the results back; this repeats until the model answers in text or the round limit is hit.
-4. The response contains the answer, the list of tool calls (arguments, duration, result preview), rounds, token usage and latency.
+1. `POST /api/chat` receives a message and, for an existing conversation, a `sessionId`.
+2. The backend loads the text turns of the session from Firestore (none for a new session).
+3. `runAgent` sends the history plus the new message to Gemini with the tool declarations and a system instruction. If the model answers with function calls, the backend validates the arguments, runs the BigQuery queries and sends the results back, until the model answers in text or the round limit is hit.
+4. The user message and the answer (with the tool log and token usage) are saved to Firestore in one batch.
+5. The response carries the answer, `sessionId`, message count, the `long_history` flag, rounds, model and latency.
+
+Only the text of the turns is stored in the history; when the model needs a number it no longer sees, it calls the tool again. The history is handled by code around `runAgent`, not by the tools.
+
+### Firestore data model
+
+- Database `llm-pocs`, collection `llm-chat-sessions`, one document per conversation: `title`, `created_at`, `updated_at`, `message_count`.
+- Subcollection `messages`: `role` (`user` / `model`), `text`, `seq`, `created_at`; model messages also hold `tool_calls` and `usage`.
+
+The database ID and collection names are constants in `packages/backend/src/config/firestore.ts`.
 
 ### Tools
 
@@ -43,6 +54,7 @@ Financial Assistant agent: Gemini function calling over SEC facts and daily stoc
 
 - **LLM:** Gemini 2.5 Flash (Vertex AI)
 - **Data:** BigQuery (SEC facts, daily prices, company metadata)
+- **Conversations:** Firestore (`@google-cloud/firestore`)
 - **Backend:** Fastify (TypeScript)
 - **Frontend:** React + Vite (TypeScript)
 - **Shared:** Zod schemas
@@ -55,15 +67,17 @@ Monorepo with npm workspaces:
 ```
 llm-chat/
 ├── packages/
-│   ├── shared/              # Zod schemas (request/response)
+│   ├── shared/              # Zod schemas (agent and chat request/response)
 │   ├── backend/             # Fastify API + agent
 │   │   ├── .env.example     # Environment template
 │   │   └── src/
-│   │       ├── server.ts    # Routes: /health, /api/agent, static frontend
+│   │       ├── server.ts    # Routes: /health, /api/chat, /api/sessions, /api/agent, static frontend
+│   │       ├── config/      # Constants: bigquery.ts (location, datasets, cost cap), firestore.ts (database, collections)
 │   │       ├── agent/       # agent.ts (loop, system instruction), tools.ts (declarations, validation, executor)
 │   │       ├── data/        # BigQuery access: bigquery.ts, companies.ts, sec.ts, prices.ts, metrics.ts
+│   │       ├── db/          # sessions.ts: conversation storage in Firestore
 │   │       └── llm/         # Gemini client
-│   └── frontend/            # React + Vite UI
+│   └── frontend/            # React + Vite chat UI (session list, history, tool log)
 ├── docs/
 │   ├── data-schema.md       # Tables the agent reads
 │   └── deployment-plan.md   # Private Cloud Run deployment
@@ -78,8 +92,9 @@ In production the backend serves both the API (`/api/*`) and the built frontend,
 
 - Node.js 20+ and npm
 - Google Cloud SDK (`gcloud`)
-- A GCP project with billing enabled, with Vertex AI and BigQuery enabled
+- A GCP project with billing enabled, with Vertex AI, BigQuery and Firestore enabled
 - BigQuery tables with SEC facts, prices and company metadata: the repo does not include data, see [docs/data-schema.md](docs/data-schema.md) for the tables, columns and a minimal DDL
+- A Firestore database in Native mode (see below)
 
 ### GCP setup
 
@@ -87,15 +102,23 @@ In production the backend serves both the API (`/api/*`) and the built frontend,
 gcloud services enable \
   aiplatform.googleapis.com \
   bigquery.googleapis.com \
+  firestore.googleapis.com \
+  --account=YOUR_ACCOUNT@gmail.com \
+  --project=YOUR_PROJECT_ID
+
+# The database ID must match DATABASE_ID in packages/backend/src/config/firestore.ts
+gcloud firestore databases create \
+  --database=llm-pocs \
+  --location=YOUR_REGION \
   --account=YOUR_ACCOUNT@gmail.com \
   --project=YOUR_PROJECT_ID
 ```
 
-For deployment also enable `run.googleapis.com`, `cloudbuild.googleapis.com` and `artifactregistry.googleapis.com`.
+If you already have a database, change `DATABASE_ID` instead of creating one. For deployment also enable `run.googleapis.com`, `cloudbuild.googleapis.com` and `artifactregistry.googleapis.com`.
 
-Your account needs `roles/bigquery.jobUser`, `roles/bigquery.dataViewer` on the datasets and `roles/aiplatform.user` on the project.
+Your account needs `roles/bigquery.jobUser`, `roles/bigquery.dataViewer` on the datasets, `roles/aiplatform.user` and `roles/datastore.user` on the project.
 
-**Costs:** no fixed monthly minimums. Gemini is billed per token (roughly a cent or less per question, thinking tokens included) and BigQuery queries are capped at 100 MB billed each, well inside the monthly free tier. These are estimates; check current GCP pricing.
+**Costs:** no fixed monthly minimums. Gemini is billed per token (roughly a cent or less per question, thinking tokens included; a long history adds input tokens to every turn), BigQuery queries are capped at 100 MB billed each, well inside the monthly free tier, and Firestore at this scale (a few reads and writes per message) stays within its free quota. These are estimates; check current GCP pricing.
 
 ## Quick start
 
@@ -124,13 +147,13 @@ Set in `packages/backend/.env` locally and as environment variables on Cloud Run
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GOOGLE_CLOUD_PROJECT` | yes | GCP project with the BigQuery datasets; also used for Vertex AI |
+| `GOOGLE_CLOUD_PROJECT` | yes | GCP project with the BigQuery datasets and the Firestore database; also used for Vertex AI |
 | `GEMINI_LOCATION` | yes | Vertex AI region for Gemini, for example `europe-central2` |
 | `GEMINI_MODEL` | yes | Model name, for example `gemini-2.5-flash` (must exist in `GEMINI_LOCATION`) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | no | Path to a credentials file instead of the default ADC |
 | `PORT`, `HOST` | no | Server port and host (defaults `3001`, `0.0.0.0`) |
 
-Dataset names and the BigQuery location are constants in `packages/backend/src/data/bigquery.ts` (see [docs/data-schema.md](docs/data-schema.md)).
+Values that describe the data rather than the environment are constants in `packages/backend/src/config/`: BigQuery location, dataset names and the per-query cost cap (`bigquery.ts`), Firestore database ID and collection names (`firestore.ts`). The long-conversation threshold (`LONG_HISTORY_MESSAGES`) is in `server.ts`.
 
 ## Scripts
 
@@ -149,50 +172,68 @@ After `npm run build`, `npm run start --workspace=packages/backend` runs the pro
 
 Returns `{ "status": "ok", "timestamp": "..." }`.
 
-### POST /api/agent
+### POST /api/chat
 
-**Request** (`query`: 3-500 characters):
+**Request** (`message`: 3-500 characters; omit `sessionId` to start a new conversation):
 
 ```json
-{ "query": "Compare Apple's and Walmart's net income in 2019." }
+{ "sessionId": "abc123", "message": "And Walmart's?" }
 ```
 
 **Response:**
 
 ```json
 {
-  "answer": "...",
-  "tool_calls": [
-    {
-      "name": "getFacts",
-      "args": { "ticker": "AAPL", "metric": "net_income" },
-      "ok": true,
-      "result_preview": "{\"ticker\":\"AAPL\",\"facts\":[...",
-      "duration_ms": 312
-    }
-  ],
+  "sessionId": "abc123",
+  "message": {
+    "role": "model",
+    "text": "...",
+    "created_at": "2026-10-19T10:00:00.000Z",
+    "tool_calls": [
+      {
+        "name": "getFacts",
+        "args": { "ticker": "WMT", "metric": "revenue" },
+        "ok": true,
+        "result_preview": "{\"ticker\":\"WMT\",\"facts\":[...",
+        "duration_ms": 312
+      }
+    ],
+    "usage": { "prompt_tokens": 3120, "output_tokens": 140, "thinking_tokens": 520 }
+  },
+  "message_count": 4,
+  "long_history": false,
   "rounds": 2,
   "round_limit_hit": false,
   "model": "gemini-2.5-flash",
-  "usage": { "prompt_tokens": 3120, "output_tokens": 140, "thinking_tokens": 520 },
-  "latency_ms": 4400
+  "latency_ms": 3100
 }
 ```
 
-An invalid request returns 400 with a message; a failure of the agent returns 500 with a generic message (details only in the server log). Try it:
+An invalid request returns 400, an unknown `sessionId` returns 404, a failure returns 500 with a generic message (details only in the server log). Try it:
 
 ```bash
-curl -X POST http://localhost:3001/api/agent \
+curl -X POST http://localhost:3001/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"query":"Which companies do you have data for?"}'
+  -d '{"message":"Which companies do you have data for?"}'
 ```
+
+### Sessions
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/sessions` | The 50 most recently updated sessions (`id`, `title`, dates, `message_count`) |
+| `GET /api/sessions/:id` | One session with all its messages |
+| `DELETE /api/sessions/:id` | Delete a session with its messages (204) |
+
+### POST /api/agent
+
+The stateless single-question endpoint inherited from POC #4 (`{ "query": "..." }`); it returns the answer, tool calls, rounds, token usage and latency without storing anything.
 
 ### Example questions
 
 Typical timings: 1.5-4.5 s for one or two tool rounds, up to about 7 s for three rounds.
 
-- "Which companies do you have data for?"
-- "Compare Apple's and Walmart's net income in 2019."
+- "What was Apple's revenue in fiscal 2019?" then "And Walmart's?" then "Compare them."
 - "How did Tesla's price change in the 90 days after its latest filing in the data?"
 - A question the data cannot answer (a missing year, a company outside the list, a P/E ratio): the agent should say what is missing and why instead of inventing numbers.
 
@@ -202,16 +243,18 @@ The prompts and example questions describe the maintainer's dataset (six compani
 
 ## Deployment
 
-Deployed privately to Cloud Run (no public access, IAM only) for testing and portfolio demonstration. To repeat it in your project: [docs/deployment-plan.md](docs/deployment-plan.md) (service account, least-privilege permissions, build, deploy, access through `gcloud run services proxy`, rollback).
+Planned: private Cloud Run (no public access, IAM only) for testing and portfolio demonstration. Steps for your project: [docs/deployment-plan.md](docs/deployment-plan.md) (service account, least-privilege permissions, build, deploy, access through `gcloud run services proxy`, rollback).
 
 **Note:** Demo URL available on request (not published for security reasons).
 
 ## Known limitations
 
-- No authentication or rate limiting of its own: do not expose it publicly (the Cloud Run deployment is private for that reason).
+- No authentication or rate limiting of its own: do not expose it publicly. All sessions are visible to whoever can reach the app (single user).
+- The whole history is sent with every question: a long conversation costs more per turn and answers may get worse. The app only warns; trimming, summarizing and question rewriting are not implemented.
+- Only the text of turns is stored, not the tool results, so a follow-up that needs a number again triggers a new tool call.
+- Two messages sent at once in the same session can interleave.
+- Follow-ups after a topic change can lose the reference, and "fiscal year" labels differ between companies (Apple's FY2019 ends in September, Walmart's in January); the agent does not align them.
 - P/E and other ratios mixing SEC figures with prices are not offered: prices are adjusted for splits and dividends while EPS is as reported.
-- Single question per request: no conversation memory (the next POC).
-- Dataset names and the BigQuery location are fixed in code.
 
 ## License
 

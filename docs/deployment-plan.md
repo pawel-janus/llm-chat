@@ -1,6 +1,6 @@
 # Deployment plan (Cloud Run, private)
 
-Status: **executed once** for the maintainer's project (service `llm-chat`, steps 1-6 below). The commands remain the reference for repeating it.
+Status: **not executed yet** for POC #5 (service `llm-chat`). The commands are adapted from the deployment of POC #4 (`llm-agent`) and add Firestore for conversations.
 
 The app is for private use: it has no authentication of its own and no rate limiting, and the price data has a private-use licence. It is therefore deployed **without public access** and reached through IAM.
 
@@ -14,7 +14,7 @@ A dedicated account, not the default compute service account.
 
 ```bash
 gcloud iam service-accounts create llm-chat-sa \
-  --display-name="LLM agent runtime" \
+  --display-name="LLM chat runtime" \
   --account=YOUR_ACCOUNT@gmail.com --project=YOUR_PROJECT_ID
 ```
 
@@ -24,6 +24,7 @@ gcloud iam service-accounts create llm-chat-sa \
 |-------|------|-----|
 | project | `roles/bigquery.jobUser` | run queries |
 | project | `roles/aiplatform.user` | call Gemini on Vertex AI |
+| project | `roles/datastore.user` | read and write conversations in Firestore |
 | datasets `sunny_sec`, `sunny_prices`, `sunny_meta` | `READER` | read only, no write |
 
 ```bash
@@ -35,7 +36,12 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
   --member="serviceAccount:${SA}" --role="roles/aiplatform.user" \
   --account=YOUR_ACCOUNT@gmail.com
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:${SA}" --role="roles/datastore.user" \
+  --account=YOUR_ACCOUNT@gmail.com
 ```
+
+`roles/datastore.user` is granted on the whole project. For a tighter scope add an IAM condition on the database (`resource.name` of the Firestore database ID from `config/firestore.ts`). The Firestore database itself must exist before the first request (creation command in the README, "GCP setup").
 
 Dataset access: add the service account as `READER` to each dataset (for example with `bq show --format=prettyjson` to a file, adding an `access` entry `{"role": "READER", "userByEmail": "<SA>"}`, then `bq update --source`).
 
@@ -80,8 +86,9 @@ The service has a `run.app` address, but it requires an IAM identity token, so a
 ### 6. Verify
 
 - `GET /health` through the proxy returns `{"status":"ok", ...}`.
-- One question through the UI or `POST /api/agent`; the tool log shows BigQuery calls and the answer carries dates and periods.
-- Check the Cloud Run logs for permission errors (`bigquery.jobs.create`, `aiplatform.endpoints.predict`).
+- Two messages in one session through the UI or `POST /api/chat` (for example "Apple revenue in fiscal 2019", then "and Walmart's?"); the second answer must use the first as context, and the tool log shows BigQuery calls.
+- `GET /api/sessions` lists the session, and the same `sessionId` still works after the instance restarts (a scale-to-zero check that the history is in Firestore, not in memory).
+- Check the Cloud Run logs for permission errors (`bigquery.jobs.create`, `aiplatform.endpoints.predict`, `datastore.*`).
 
 ## Costs
 
@@ -94,6 +101,7 @@ No fixed monthly minimums; everything scales to zero.
 | Artifact Registry | storage | image of about 200 MB, a few cents per month |
 | Gemini 2.5 Flash | per question | roughly 0.3-0.5 cent per question (measured 1-4k input tokens plus thinking tokens) |
 | BigQuery | per query | inside the 1 TiB monthly free tier; every query capped at 100 MB billed |
+| Firestore | per read/write, storage | a few operations per message; within the free quota at private use (the database must have the free tier available) |
 | Service account, IAM | | $0 |
 
 The figures are estimates and were not re-checked against current GCP price lists.
@@ -106,4 +114,4 @@ gcloud artifacts docker images delete YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID
 gcloud iam service-accounts delete llm-chat-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com --account=YOUR_ACCOUNT@gmail.com --project=YOUR_PROJECT_ID
 ```
 
-Remove the dataset `READER` entries of the service account as well.
+Remove the dataset `READER` entries and the project-level `roles/datastore.user` binding of the service account as well. Conversations stay in Firestore after the service is deleted; delete them with `DELETE /api/sessions/:id` before that, or remove the collection `llm-chat-sessions` in the console.
