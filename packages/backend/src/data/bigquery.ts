@@ -4,11 +4,7 @@
  */
 
 import { BigQuery } from '@google-cloud/bigquery';
-
-export const LOCATION = 'europe-central2';
-
-// Hard cap per query; BigQuery fails the job instead of billing more.
-const MAX_BYTES_BILLED = '100000000'; // 100 MB
+import { LOCATION, MAX_BYTES_BILLED, type Dataset } from '../config/bigquery.js';
 
 let client: BigQuery | undefined;
 
@@ -18,7 +14,7 @@ function getClient(): BigQuery {
 }
 
 /** Fully qualified, backtick-quoted table name, e.g. `proj.sunny_sec.facts`. */
-export function table(dataset: 'sunny_sec' | 'sunny_prices' | 'sunny_meta', name: string): string {
+export function table(dataset: Dataset, name: string): string {
   return `\`${process.env.GOOGLE_CLOUD_PROJECT}.${dataset}.${name}\``;
 }
 
