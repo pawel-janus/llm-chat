@@ -269,3 +269,145 @@
   word-break: break-all;
   color: #444;
 }
+
+/* Chat layout (POC #5) */
+.chat-app {
+  max-width: 1200px;
+}
+
+.chat-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.sessions {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.session-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.session-item {
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+  margin-bottom: 0.25rem;
+}
+
+.session-item.active {
+  background: #eef0ff;
+}
+
+.session-open {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.session-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #1a1a1a;
+}
+
+.session-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.session-delete {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.session-delete:hover {
+  color: #c0392b;
+}
+
+.session-empty {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.chat-main {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  min-height: 60vh;
+}
+
+.chat-messages {
+  flex: 1;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  max-width: 85%;
+}
+
+.bubble.user {
+  background: #667eea;
+  color: white;
+  margin-left: auto;
+}
+
+.bubble.user .answer-text {
+  color: white;
+}
+
+.bubble.model {
+  background: #f4f5f7;
+}
+
+.bubble.thinking {
+  color: #888;
+  font-style: italic;
+}
+
+.chat-toollog {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.chat-toollog > summary {
+  cursor: pointer;
+  color: #667eea;
+}
+
+.chat-form .ask-button {
+  margin-bottom: 0;
+}
+
+@media (max-width: 800px) {
+  .chat-layout {
+    grid-template-columns: 1fr;
+  }
+}
