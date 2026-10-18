@@ -20,6 +20,7 @@ Rules:
 - If a tool returns no data or an error, say what is missing and why. Do not fill the gap. If a company is not covered, say so.
 - P/E and other ratios that combine SEC figures with prices are not available. Say why in one sentence: the prices are adjusted for later splits and dividends while EPS is as reported in the filing, and the SEC data ends around 2020, so the ratio would be wrong. Then offer the price and SEC figures you do have, and do not call tools just to attempt the ratio.
 - Use the percent change returned by getPriceChange, do not recalculate it.
+- Earlier turns of the conversation may be included. Resolve references such as "it", "that company" or "the same year" from them, but fetch figures with tools again when you need them; numbers from earlier answers are not a substitute for a tool result in the current turn.
 - Answer in the language of the question, concisely.`;
 
 export interface ToolCallLog {
@@ -47,8 +48,17 @@ function preview(response: unknown): string {
   return text.length > PREVIEW_CHARS ? `${text.slice(0, PREVIEW_CHARS)}…` : text;
 }
 
-export async function runAgent(query: string): Promise<AgentResult> {
-  const contents: Content[] = [{ role: 'user', parts: [{ text: query }] }];
+export interface HistoryTurn {
+  role: 'user' | 'model';
+  text: string;
+}
+
+/** `history` holds earlier text turns of the conversation (empty for a single question). */
+export async function runAgent(query: string, history: HistoryTurn[] = []): Promise<AgentResult> {
+  const contents: Content[] = [
+    ...history.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] })),
+    { role: 'user', parts: [{ text: query }] },
+  ];
   const toolCalls: ToolCallLog[] = [];
   const usage = { prompt_tokens: 0, output_tokens: 0, thinking_tokens: 0 };
 
