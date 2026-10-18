@@ -1,0 +1,27 @@
+{
+  "name": "@llm-chat/backend",
+  "version": "1.0.0",
+  "description": "Backend API for the LLM agent",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/static": "^10.1.4",
+    "@google-cloud/bigquery": "^7.5.0",
+    "@google/genai": "^2.24.0",
+    "@llm-chat/shared": "^1.0.0",
+    "dotenv": "^18.0.3",
+    "fastify": "^5.12.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

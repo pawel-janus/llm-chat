@@ -1,0 +1,26 @@
+node_modules
+dist
+*.log
+.git
+.gitignore
+README.md
+.env
+.env.local
+.DS_Store
+coverage
+.vscode
+.idea
+
+# Frontend node_modules (will be installed by npm ci)
+packages/frontend/node_modules
+
+# Development files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+**/.env
+**/.env.*
+adc-private.json
+service-account-key.json
+docs

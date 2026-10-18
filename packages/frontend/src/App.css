@@ -1,0 +1,271 @@
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: #1a1a1a;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1rem;
+}
+
+.main {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.question-form {
+  margin-bottom: 2rem;
+}
+
+.question-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s;
+}
+
+.question-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.question-input:disabled {
+  background: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.ask-button {
+  width: 100%;
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ask-button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.ask-button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+}
+
+.error {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: #c00;
+}
+
+.examples {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.examples-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #555;
+}
+
+.examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.example-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.example-item:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.example-text {
+  flex: 1;
+  color: #444;
+  font-size: 0.95rem;
+}
+
+.example-run-button {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.example-run-button:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+.answer-section {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.answer-box {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.answer-box h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.answer-text {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #444;
+  margin: 0 0 1rem 0;
+}
+
+.answer-meta {
+  font-size: 0.85rem;
+  color: #999;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.answer-text {
+  white-space: pre-wrap;
+}
+
+.answer-warning {
+  margin: 0 0 1rem 0;
+  color: #b45309;
+  font-size: 0.9rem;
+}
+
+.toollog-box {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.toollog-box h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.toollog-empty {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.toollog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toollog-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+}
+
+.toollog-item summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+}
+
+.toollog-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+.toollog-badge.ok {
+  background: #e6f6ec;
+  color: #1a7f3c;
+}
+
+.toollog-badge.err {
+  background: #fde8e8;
+  color: #c00;
+}
+
+.toollog-args {
+  flex: 1;
+  min-width: 0;
+  color: #666;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toollog-time {
+  color: #999;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.toollog-result {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #444;
+}

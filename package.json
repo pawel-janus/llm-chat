@@ -1,0 +1,29 @@
+{
+  "name": "llm-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LLM agent - Gemini function calling over SEC facts and stock prices in BigQuery",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=packages/backend",
+    "dev:frontend": "npm run dev --workspace=packages/frontend",
+    "build:shared": "npm run build --workspace=packages/shared",
+    "build:backend": "npm run build --workspace=packages/backend",
+    "build:frontend": "npm run build --workspace=packages/frontend",
+    "build": "npm run build:shared && npm run build:backend && npm run build:frontend"
+  },
+  "keywords": [
+    "llm",
+    "agent",
+    "function-calling",
+    "bigquery",
+    "vertex-ai"
+  ],
+  "author": "Paweł Janus <paweljanus.dev@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^2.24.0"
+  }
+}
