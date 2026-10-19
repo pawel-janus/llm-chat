@@ -243,7 +243,7 @@ The prompts and example questions describe the maintainer's dataset (six compani
 
 ## Deployment
 
-Planned: private Cloud Run (no public access, IAM only) for testing and portfolio demonstration. Steps for your project: [docs/deployment-plan.md](docs/deployment-plan.md) (service account, least-privilege permissions, build, deploy, access through `gcloud run services proxy`, rollback).
+Deployed privately to Cloud Run (no public access, IAM only; reached through `gcloud run services proxy`) with conversations in Firestore, for testing and portfolio demonstration. Steps for your project: [docs/deployment-plan.md](docs/deployment-plan.md) (service account, least-privilege permissions, build, deploy, access through `gcloud run services proxy`, rollback).
 
 **Note:** Demo URL available on request (not published for security reasons).
 

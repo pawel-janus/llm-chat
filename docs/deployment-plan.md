@@ -1,6 +1,6 @@
 # Deployment plan (Cloud Run, private)
 
-Status: **not executed yet** for POC #5 (service `llm-chat`). The commands are adapted from the deployment of POC #4 (`llm-agent`) and add Firestore for conversations.
+Status: **executed and verified** (19.10.2026) for service `llm-chat`: health check, a two-message session with a follow-up, and history surviving a new revision (Firestore). The commands are adapted from the deployment of POC #4 (`llm-agent`) and add Firestore for conversations.
 
 The app is for private use: it has no authentication of its own and no rate limiting, and the price data has a private-use licence. It is therefore deployed **without public access** and reached through IAM.
 
