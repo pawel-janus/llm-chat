@@ -4,7 +4,7 @@ Financial Assistant with conversation memory: a Gemini function-calling agent ov
 
 **Part of:** [AI/LLM POC sequence](https://github.com/pawel-janus/ai-llm-pocs) - POC #5
 
-**Status:** 🔄 In progress. Chat backend (`POST /api/chat`, sessions API) and UI work locally; private Cloud Run deployment is not done yet (plan: [docs/deployment-plan.md](docs/deployment-plan.md)).
+**Status:** ✅ Complete. Chat backend (`POST /api/chat`, sessions API) and UI work locally and on a private Cloud Run deployment (plan: [docs/deployment-plan.md](docs/deployment-plan.md)).
 
 **Example interaction:**
 - **Turn 1:** "What was Apple's revenue in fiscal 2019?" - the model calls `getFacts` and answers with the figure and its period.
